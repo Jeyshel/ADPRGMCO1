@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"github.com/wcharczuk/go-chart"
 )
 
 type sKeyVal struct {
