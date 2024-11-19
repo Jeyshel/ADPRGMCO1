@@ -147,12 +147,9 @@ func main() {
 	lines := convertToSlice(slice)
 	words := convertToWords(lines)
 	characters := sortRuneMapByValueDesc(convertToChar(lines))
-	wordMap := mapWords(words)
-	sortedList := sortStringMapByValueDesc(wordMap)
 
 	f.Println("Total number of words: ", countWords(words))
 	f.Println("Total number of unique words: ", countUniqueWords(words))
 	displayCharSlice(characters)
-	displayTop20(sortedList)
 
 }
