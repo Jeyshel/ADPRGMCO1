@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/csv"
-	"fmt"
 	f "fmt"
 	"io"
 	"log"
@@ -10,8 +9,10 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
-	"github.com/wcharczuk/go-chart"
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
 type sKeyVal struct {
@@ -50,6 +51,18 @@ func convertToChar(str []string) map[rune]int {
 		}
 	}
 	return char
+}
+
+func convertToSymbols(str []string) map[rune]int {
+	symbols := make(map[rune]int)
+	for i := 0; i < len(str); i++ {
+		for _, c := range str[i] {
+			if !unicode.IsLetter(c) && !unicode.IsDigit(c) {
+				symbols[c]++
+			}
+		}
+	}
+	return symbols
 }
 
 func sortRuneMapByValueDesc(m map[rune]int) []rKeyVal {
@@ -93,33 +106,27 @@ func sortStringMapByValueDesc(m map[string]int) []sKeyVal {
 	return mapSlice
 }
 
-func displaySlice(str []string) {
-	for i := 0; i < len(str); i++ {
-		f.Println(str[i])
-	}
-}
-
-func displayMap(m map[string]int) {
-	for key, value := range m {
-		fmt.Println(key, value)
-	}
-}
-
-func displayTop20(arr []sKeyVal) {
-	f.Println("The top 20 words are: ")
-	for i, kv := range arr {
-		if i >= 20 {
-			break
+func isStopWord(word string) string {
+	stopWords := []string{"a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has", "he", "in", "is", "it", "its", "of", "on", "that", "the", "to", "was", "were", "will", "with"}
+	for i := 0; i < len(stopWords); i++ {
+		if word == stopWords[i] {
+			return "Y"
 		}
-		f.Printf("Key: %s, Value: %d\n", kv.Key, kv.Value)
 	}
+	return ""
 }
 
 func displayCharSlice(m []rKeyVal) {
 	f.Println("Character frequency count: ")
-	for _, kv := range m {
+	for i := 0; i < len(m); i++ {
+		f.Println(i+1, string(m[i].Key), m[i].Value)
+	}
+}
 
-		f.Printf("Key: %c, Value: %d\n", kv.Key, kv.Value)
+func displayMapSlice(m []sKeyVal) {
+	for i := 0; i < len(m); i++ {
+		f.Println(i+1, ":", isStopWord(m[i].Key), ":", m[i].Key, ":", m[i].Value)
+
 	}
 }
 
@@ -138,11 +145,8 @@ func barChartPosts(m [][]string) {
 	december := 0
 
 	for i := 0; i < len(m); i++ {
-		date, err := time.Parse("2006-01-02 15:04:05", m[i][2])
-		if err != nil {
-			log.Println("Error parsing date:", err)
-			continue
-		}
+		date, _ := time.Parse("2006-01-02 15:04:05", m[i][2])
+
 		switch date.Month() {
 		case time.January:
 			january++
@@ -170,47 +174,78 @@ func barChartPosts(m [][]string) {
 			december++
 		}
 	}
-	graph := chart.BarChart{
+
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
 		Title: "Posts per month",
-		Background: chart.Style{
-			Padding: chart.Box{
-				Top: 40,
-			},
-		},
-		Height:   512,
-		BarWidth: 60,
-		Bars: []chart.Value{
-			{Value: float64(january), Label: "January"},
-			{Value: float64(february), Label: "February"},
-			{Value: float64(march), Label: "March"},
-			{Value: float64(april), Label: "April"},
-			{Value: float64(may), Label: "May"},
-			{Value: float64(june), Label: "June"},
-			{Value: float64(july), Label: "July"},
-			{Value: float64(august), Label: "August"},
-			{Value: float64(september), Label: "September"},
-			{Value: float64(october), Label: "October"},
-			{Value: float64(november), Label: "November"},
-			{Value: float64(december), Label: "December"},
-		},
-		XAxis: chart.Style{
-			Show: true,
-		},
-		YAxis: chart.YAxis{
-			Style: chart.Style{
-				Show: true,
-			},
-		},
+	}))
+
+	bar.SetXAxis([]string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}).
+		AddSeries("Posts", []opts.BarData{
+			{Value: january},
+			{Value: february},
+			{Value: march},
+			{Value: april},
+			{Value: may},
+			{Value: june},
+			{Value: july},
+			{Value: august},
+			{Value: september},
+			{Value: october},
+			{Value: november},
+			{Value: december},
+		})
+	f, _ := os.Create("bar.html")
+	bar.Render(f)
+
+}
+
+func wordCloudHTML(words map[string]int) {
+	wc := charts.NewWordCloud()
+	wc.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
+		Title: "Word Cloud",
+	}))
+
+	items := make([]opts.WordCloudData, 0, len(words))
+	for word, count := range words {
+		items = append(items, opts.WordCloudData{Name: word, Value: count})
 	}
 
-	f, err := os.Create("barchart.png")
-	if err != nil {
-		log.Fatalf("Failed to create file: %v", err)
+	wc.AddSeries("wordcloud", items)
+	f, _ := os.Create("wordcloud.html")
+	wc.Render(f)
+}
+
+func topNWords(wordMap map[string]int, n int) map[string]int {
+	sortedWords := sortStringMapByValueDesc(wordMap)
+	topWords := make(map[string]int)
+	for i := 0; i < n && i < len(sortedWords); i++ {
+		topWords[sortedWords[i].Key] = sortedWords[i].Value
 	}
-	defer f.Close()
-	if err := graph.Render(chart.PNG, f); err != nil {
-		log.Fatalf("Failed to render graph: %v", err)
+	return topWords
+}
+
+func isSymbol(c rune) bool {
+	return !unicode.IsLetter(c) && !unicode.IsDigit(c)
+}
+
+func symbolPieChart(symbols map[rune]int) {
+	pie := charts.NewPie()
+
+	pie.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
+		Title: "Symbol frequency",
+	}))
+
+	items := make([]opts.PieData, 0, len(symbols))
+	for symbol, count := range symbols {
+		if isSymbol(symbol) {
+			items = append(items, opts.PieData{Name: string(symbol), Value: count})
+		}
 	}
+
+	pie.AddSeries("Symbols", items)
+	f, _ := os.Create("pie.html")
+	pie.Render(f)
 }
 
 func main() {
@@ -243,6 +278,13 @@ func main() {
 
 	f.Println("Total number of words: ", countWords(words))
 	f.Println("Total number of unique words: ", countUniqueWords(words))
+	displayMapSlice(sortStringMapByValueDesc(mapWords(words)))
 	displayCharSlice(characters)
+
 	barChartPosts(slice)
+	symbolPieChart(convertToChar(lines))
+
+	wordMap := mapWords(words)
+	topWords := topNWords(wordMap, 20)
+	wordCloudHTML(topWords)
 }
