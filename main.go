@@ -9,6 +9,9 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
+
+	"github.com/wcharczuk/go-chart"
 )
 
 type sKeyVal struct {
@@ -120,6 +123,96 @@ func displayCharSlice(m []rKeyVal) {
 	}
 }
 
+func barChartPosts(m [][]string) {
+	january := 0
+	february := 0
+	march := 0
+	april := 0
+	may := 0
+	june := 0
+	july := 0
+	august := 0
+	september := 0
+	october := 0
+	november := 0
+	december := 0
+
+	for i := 0; i < len(m); i++ {
+		date, err := time.Parse("2006-01-02 15:04:05", m[i][2])
+		if err != nil {
+			log.Println("Error parsing date:", err)
+			continue
+		}
+		switch date.Month() {
+		case time.January:
+			january++
+		case time.February:
+			february++
+		case time.March:
+			march++
+		case time.April:
+			april++
+		case time.May:
+			may++
+		case time.June:
+			june++
+		case time.July:
+			july++
+		case time.August:
+			august++
+		case time.September:
+			september++
+		case time.October:
+			october++
+		case time.November:
+			november++
+		case time.December:
+			december++
+		}
+	}
+	graph := chart.BarChart{
+		Title: "Posts per month",
+		Background: chart.Style{
+			Padding: chart.Box{
+				Top: 40,
+			},
+		},
+		Height:   512,
+		BarWidth: 60,
+		Bars: []chart.Value{
+			{Value: float64(january), Label: "January"},
+			{Value: float64(february), Label: "February"},
+			{Value: float64(march), Label: "March"},
+			{Value: float64(april), Label: "April"},
+			{Value: float64(may), Label: "May"},
+			{Value: float64(june), Label: "June"},
+			{Value: float64(july), Label: "July"},
+			{Value: float64(august), Label: "August"},
+			{Value: float64(september), Label: "September"},
+			{Value: float64(october), Label: "October"},
+			{Value: float64(november), Label: "November"},
+			{Value: float64(december), Label: "December"},
+		},
+		XAxis: chart.Style{
+			Show: true,
+		},
+		YAxis: chart.YAxis{
+			Style: chart.Style{
+				Show: true,
+			},
+		},
+	}
+
+	f, err := os.Create("barchart.png")
+	if err != nil {
+		log.Fatalf("Failed to create file: %v", err)
+	}
+	defer f.Close()
+	if err := graph.Render(chart.PNG, f); err != nil {
+		log.Fatalf("Failed to render graph: %v", err)
+	}
+}
+
 func main() {
 	var filename string
 	f.Println("Enter file name: ")
@@ -151,5 +244,5 @@ func main() {
 	f.Println("Total number of words: ", countWords(words))
 	f.Println("Total number of unique words: ", countUniqueWords(words))
 	displayCharSlice(characters)
-
+	barChartPosts(slice)
 }
