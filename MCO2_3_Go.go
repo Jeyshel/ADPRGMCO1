@@ -1,3 +1,9 @@
+// ********************
+// Last names: Gaffud
+// Language: Go
+// Paradigm(s): Imperative
+// ********************
+
 package main
 
 import (
@@ -51,18 +57,6 @@ func convertToChar(str []string) map[rune]int {
 		}
 	}
 	return char
-}
-
-func convertToSymbols(str []string) map[rune]int {
-	symbols := make(map[rune]int)
-	for i := 0; i < len(str); i++ {
-		for _, c := range str[i] {
-			if !unicode.IsLetter(c) && !unicode.IsDigit(c) {
-				symbols[c]++
-			}
-		}
-	}
-	return symbols
 }
 
 func sortRuneMapByValueDesc(m map[rune]int) []rKeyVal {
